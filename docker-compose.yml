@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: human_detection_api
+    ports:
+      - "8080:8080"
+    restart: always
+    # Gắn volume để tái sử dụng file model yolov8n.pt tránh việc tải lại mỗi lần restart
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: human_detection_ui
+    ports:
+      - "80:80"
+    restart: always
+    depends_on:
+      - backend
