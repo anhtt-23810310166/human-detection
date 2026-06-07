@@ -5,7 +5,8 @@ Tài liệu này định nghĩa ngữ cảnh, kiến trúc và luật nghiệp v
 ## 1. Kiến trúc (Architecture)
 - **Mô hình AI:** YOLOv8 (phiên bản `yolov8n.pt` / `yolov8n.onnx`). Đây là mô hình Object Detection.
 - **Backend:** FastAPI (Python). Chịu trách nhiệm nhận ảnh, chạy Inference, trích xuất tọa độ Bounding Box.
-- **Frontend:** HTML5, CSS3 (Vanilla), JS. Dùng `navigator.mediaDevices.getUserMedia` bắt webcam, vẽ Canvas overlay.
+- **Frontend:** Nginx (Alpine) host HTML5, CSS3, JS tĩnh.
+- **Triển khai (Deployment):** Quản lý toàn bộ bằng `docker-compose.yml` (Tách biệt Frontend Port 80 và Backend Port 8080).
 
 ## 2. Luật Nghiệp vụ (Business Rules)
 - **Quy tắc Phân loại (Lọc):** AI YOLOv8 trả về nhiều Class. Hệ thống CHỈ quan tâm đến `Class_ID = 0` (Person). TẤT CẢ các vật thể khác bị bỏ qua.

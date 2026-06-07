@@ -32,23 +32,29 @@ sequenceDiagram
     end
 ```
 
-## 🛠️ Cài đặt (Installation)
+## 🛠️ Cài đặt & Triển khai (Deployment)
 
-### 1. Yêu cầu hệ thống (Prerequisites)
-- Python 3.9+
-- Trình duyệt Web hiện đại (Chrome/Edge/Firefox)
+Cách chuyên nghiệp nhất để chạy hệ thống này là sử dụng **Docker Compose**.
 
-### 2. Thiết lập Backend
+### 1. Triển khai bằng Docker (Khuyên dùng)
+Yêu cầu: Máy tính/Edge Device đã cài đặt Docker & Docker Compose.
 ```bash
+docker-compose up -d --build
+```
+- **Frontend (UI):** Truy cập `http://localhost:80`
+- **Backend (API):** Chạy ngầm tại `http://localhost:8080`
+
+### 2. Chạy thủ công (Dành cho Developer)
+Nếu không có Docker, bạn có thể chạy chay từng module:
+```bash
+# Terminal 1: Chạy Backend
 cd backend
 pip install -r requirements.txt
 python main.py
-```
-*Server sẽ chạy tại: `http://localhost:8080`*
 
-### 3. Khởi chạy Frontend
-Chỉ cần mở file `frontend/index.html` bằng bất kỳ trình duyệt nào.
-*(Yêu cầu cấp quyền truy cập Camera)*
+# Terminal 2: Chạy Frontend
+Mở file frontend/index.html bằng trình duyệt.
+```
 
 ## 📁 Cấu trúc Thư mục
 ```text
