@@ -36,13 +36,16 @@
     <div class="dashboard" id="mainDashboard" style="display: none;">
         <!-- Sidebar (Left) -->
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <h1 class="logo">YOLO <span class="highlight">GUARD</span></h1>
-                <p class="subtitle">ENTERPRISE EDITION</p>
+            <div class="logo-section">
+                <div class="logo-icon">YG</div>
+                <div>
+                    <h2>YOLO <span style="color: var(--cyan);">GUARD</span></h2>
+                    <p style="font-size: 10px; color: var(--text-muted); letter-spacing: 1px;">ENTERPRISE EDITION</p>
+                </div>
             </div>
 
-            <nav class="sidebar-nav">
-                <div class="nav-section">
+            <div class="menu-wrapper">
+                <div class="menu-section">
                     <h3>HỆ THỐNG</h3>
                     <ul>
                         <li class="nav-item active" data-target="view-dashboard">
@@ -57,10 +60,10 @@
                     </ul>
                 </div>
 
-                <div class="nav-section">
+                <div class="menu-section">
                     <h3>PHÍM TẮT</h3>
                     <ul>
-                        <li id="snapshotBtn">
+                        <li id="snapshotBtn" class="nav-item">
                             <span class="icon">📸</span> Chụp ảnh Bằng chứng
                         </li>
                         <li class="nav-item" data-target="view-analytics">
@@ -71,7 +74,7 @@
                         </li>
                     </ul>
                 </div>
-            </nav>
+            </div>
 
             <div class="sidebar-footer">
                 <div class="user-profile">
