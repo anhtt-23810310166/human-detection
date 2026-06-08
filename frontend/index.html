@@ -13,7 +13,7 @@
     <div id="loginOverlay" class="login-overlay">
         <div class="login-box">
             <h1 class="logo" style="margin-bottom: 30px; padding: 0;">
-                YOLO <span class="highlight">GUARD</span>
+                YOLO <span style="color: var(--cyan);">GUARD</span>
             </h1>
             <p style="color: var(--text-muted); margin-bottom: 24px;">Truy cập Hệ thống An ninh</p>
             
@@ -32,7 +32,7 @@
         </div>
     </div>
 
-    <!-- MAIN DASHBOARD (BỊ ẨN KHI CHƯA LOGIN) -->
+    <!-- MAIN DASHBOARD -->
     <div class="dashboard" id="mainDashboard" style="display: none;">
         <!-- Sidebar (Left) -->
         <aside class="sidebar">
@@ -88,142 +88,160 @@
             </div>
         </aside>
 
-        <!-- Main Content Area (Right) -->
-        <main class="main-content">
-            <!-- VIEW: DASHBOARD (CAMERA) -->
-            <section id="view-dashboard" class="view-section active">
-                <div class="video-container">
-                    <div class="video-header">
-                        <div class="cam-info">
-                            <span class="live-dot"></span>
-                            <span class="cam-name">CAM-01: CỬA CHÍNH</span>
-                        </div>
-                        <div class="cam-stats">
-                            <span class="badge">YOLOv8</span>
-                            <span class="badge time" id="liveTimestamp">00:00:00</span>
-                        </div>
+        <!-- Main Area (Right) -->
+        <main class="main-area">
+            
+            <header class="top-bar">
+                <div class="header-title">
+                    <div class="fire-icon">🔥</div>
+                    <div class="title-text">
+                        <h1>HỆ THỐNG CẢNH BÁO XÂM NHẬP</h1>
+                        <p class="subtitle">POWERED BY YOLOv8 AI</p>
                     </div>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                
+                <!-- VIEW: DASHBOARD (CAMERA) -->
+                <section id="view-dashboard" class="view-section active">
                     
-                    <div class="video-wrapper">
-                        <!-- Video gốc lấy từ Webcam -->
-                        <video id="webcam" autoplay playsinline muted></video>
-                        <!-- Canvas dùng để trích xuất frame gửi lên server -->
-                        <canvas id="captureCanvas"></canvas>
-                        <!-- Canvas dùng để vẽ Bounding Box đè lên Video -->
-                        <canvas id="overlayCanvas"></canvas>
-                        
-                        <div class="crosshair-center"></div>
-                        <div class="corner-borders"></div>
-                    </div>
+                    <!-- Khối Video lớn -->
+                    <div class="video-section">
+                        <div class="video-container">
+                            <div class="video-header-overlay">
+                                <div class="cam-info">
+                                    <span class="live-dot"></span>
+                                    <span class="cam-name">CAM-01: CỬA CHÍNH</span>
+                                </div>
+                                <div class="cam-stats">
+                                    <span class="badge">YOLOv8</span>
+                                    <span class="badge time" id="liveTimestamp">00:00:00</span>
+                                </div>
+                            </div>
+                            
+                            <div class="video-wrapper">
+                                <!-- Video gốc lấy từ Webcam -->
+                                <video id="webcam" autoplay playsinline muted></video>
+                                <!-- Canvas ẩn dùng để lấy frame -->
+                                <canvas id="captureCanvas" style="display: none;"></canvas>
+                                <!-- Canvas dùng để vẽ Khung đỏ (Bounding Box) -->
+                                <canvas id="overlayCanvas"></canvas>
+                                
+                                <div class="crosshair-center"></div>
+                                <div class="corner-borders"></div>
+                            </div>
 
-                    <div class="video-footer">
-                        <button id="toggleEngineBtn" class="engine-btn">
-                            <span class="icon">⚡</span> Khởi động AI
-                        </button>
-                        <div class="engine-status" id="engineStatusBadge">AI: ĐANG CHỜ LỆNH</div>
-                    </div>
-                </div>
-
-                <!-- Live Stats Cards -->
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3>TRẠNG THÁI HỆ THỐNG</h3>
-                        <div class="card-value safe" id="systemStatusVal">
-                            <span class="icon">✅</span> <span class="text">Hệ thống Tạm dừng</span>
+                            <div class="video-footer-overlay">
+                                <button id="toggleEngineBtn" class="engine-btn">
+                                    <span class="icon">⚡</span> Khởi động AI
+                                </button>
+                                <div class="engine-status" id="engineStatusBadge">AI: ĐANG CHỜ LỆNH</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="stat-card" id="personCountBox">
-                        <h3>SỐ LƯỢNG ĐỐI TƯỢNG</h3>
-                        <div class="card-value count">
-                            <span class="number" id="personCountVal">0</span>
-                            <span class="unit">NGƯỜI</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
-            <!-- VIEW: LỊCH SỬ ĐỘT NHẬP -->
-            <section id="view-history" class="view-section">
-                <div class="mockup-container">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2>🚨 Bằng chứng Đột nhập</h2>
-                        <button id="clearHistoryBtn" class="action-btn-small">Xóa Lịch sử</button>
-                    </div>
-                    <div class="table-scroll">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Thời gian</th>
-                                    <th>Độ tin cậy</th>
-                                    <th>Mức độ</th>
-                                    <th>Trạng thái</th>
-                                </tr>
-                            </thead>
-                            <tbody id="historyTableBody">
-                                <!-- Render by JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- VIEW: BÁO CÁO QUÂN SỐ -->
-            <section id="view-reports" class="view-section">
-                <div class="mockup-container">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2>👥 Tổng quan Quân số</h2>
-                        <button id="clearStatsBtn" class="action-btn-small">Reset Thống kê</button>
-                    </div>
+                    <!-- Khối thẻ thông số dưới Video -->
                     <div class="stats-grid">
                         <div class="stat-card">
-                            <h3>TỔNG SỐ LƯỢT QUÉT (FRAMES)</h3>
+                            <div class="card-title">TRẠNG THÁI HỆ THỐNG</div>
+                            <div class="card-value safe" id="systemStatusVal">
+                                <span class="icon">✅</span> <span class="text">Hệ thống Tạm dừng</span>
+                            </div>
+                        </div>
+                        <div class="stat-card" id="personCountBox">
+                            <div class="card-title">SỐ LƯỢNG ĐỐI TƯỢNG</div>
                             <div class="card-value count">
-                                <span class="number" id="totalScansVal">0</span>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>TỔNG SỐ LẦN PHÁT HIỆN</h3>
-                            <div class="card-value count" style="color: var(--orange);">
-                                <span class="number" id="totalAlarmsVal">0</span>
+                                <span class="number" id="personCountVal">0</span>
+                                <span class="unit">NGƯỜI</span>
                             </div>
                         </div>
                     </div>
-                </div>
-            </section>
-            
-            <!-- VIEW: ANALYTICS (BIỂU ĐỒ) -->
-            <section id="view-analytics" class="view-section">
-                <div class="mockup-container" style="display: flex; flex-direction: column;">
-                    <h2>📈 Biểu đồ Mức độ Nguy hiểm</h2>
-                    <p style="color: var(--text-muted); margin-bottom: 20px;">Dữ liệu độ tin cậy của AI (Confidence %) theo thời gian thực.</p>
-                    <div style="flex-grow: 1; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 20px; position: relative;">
-                        <canvas id="reportChart"></canvas>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- VIEW: QUẢN TRỊ (Cài đặt thật) -->
-            <section id="view-admin" class="view-section">
-                <div class="mockup-container">
-                    <h2>⚙️ Bảng Điều khiển Hệ thống</h2>
-                    
-                    <div class="settings-card" style="margin-top: 20px;">
-                        <div class="setting-header">
-                            <div>
-                                <h3>Độ Nhạy Phân Tích (Confidence Threshold)</h3>
-                                <p>AI sẽ bỏ qua các nhận diện có độ tin cậy thấp hơn ngưỡng này.</p>
-                            </div>
-                            <div class="slider-value" id="confidenceValueDisplay">60%</div>
-                        </div>
-                        <input type="range" id="confidenceSlider" class="custom-slider" min="10" max="95" value="60" step="5">
-                        <div class="slider-labels">
-                            <span>Thấp (Báo động giả nhiều)</span>
-                            <span>Cao (Bỏ lót nhiều)</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
+                </section>
 
+                <!-- VIEW: LỊCH SỬ ĐỘT NHẬP -->
+                <section id="view-history" class="view-section">
+                    <div class="mockup-container">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2>🚨 Bằng chứng Đột nhập</h2>
+                            <button id="clearHistoryBtn" class="action-btn-small">Xóa Lịch sử</button>
+                        </div>
+                        <div class="table-scroll">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Thời gian</th>
+                                        <th>Độ tin cậy</th>
+                                        <th>Mức độ</th>
+                                        <th>Trạng thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyTableBody">
+                                    <!-- Dữ liệu được fetch từ MongoDB -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: BÁO CÁO QUÂN SỐ -->
+                <section id="view-reports" class="view-section">
+                    <div class="mockup-container">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2>👥 Tổng quan Quân số</h2>
+                            <button id="clearStatsBtn" class="action-btn-small">Reset Thống kê</button>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="card-title">TỔNG SỐ LƯỢT QUÉT (FRAMES)</div>
+                                <div class="card-value count">
+                                    <span class="number" id="totalScansVal">0</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="card-title">TỔNG SỐ LẦN PHÁT HIỆN</div>
+                                <div class="card-value count" style="color: var(--orange);">
+                                    <span class="number" id="totalAlarmsVal">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: ANALYTICS (BIỂU ĐỒ) -->
+                <section id="view-analytics" class="view-section">
+                    <div class="mockup-container" style="display: flex; flex-direction: column;">
+                        <h2>📈 Biểu đồ Mức độ Nguy hiểm</h2>
+                        <p style="color: var(--text-muted); margin-bottom: 20px;">Dữ liệu độ tin cậy của AI (Confidence %) theo thời gian thực.</p>
+                        <div style="flex-grow: 1; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 20px; position: relative; min-height: 300px;">
+                            <canvas id="reportChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: QUẢN TRỊ -->
+                <section id="view-admin" class="view-section">
+                    <div class="mockup-container">
+                        <h2>⚙️ Bảng Điều khiển Hệ thống</h2>
+                        
+                        <div class="settings-card" style="margin-top: 20px;">
+                            <div class="setting-header">
+                                <div>
+                                    <h3>Độ Nhạy Phân Tích (Confidence Threshold)</h3>
+                                    <p>AI sẽ bỏ qua các nhận diện có độ tin cậy thấp hơn ngưỡng này.</p>
+                                </div>
+                                <div class="slider-value" id="confidenceValueDisplay">60%</div>
+                            </div>
+                            <input type="range" id="confidenceSlider" class="custom-slider" min="10" max="95" value="60" step="5">
+                            <div class="slider-labels">
+                                <span>Thấp (Báo động giả nhiều)</span>
+                                <span>Cao (Bỏ lót nhiều)</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
         </main>
     </div>
 
