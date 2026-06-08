@@ -2,14 +2,32 @@ import io
 import os
 import datetime
 import jwt
+import bcrypt
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
-from passlib.context import CryptContext
 from ultralytics import YOLO
 from PIL import Image
 from motor.motor_asyncio import AsyncIOMotorClient
+import cv2
+import numpy as np
+import requests
+import threading
+
+TELEGRAM_BOT_TOKEN = "8903352640:AAG2FNzhrPoj8-UEzvkI8LRCq-KlXDY1GQM"
+TELEGRAM_CHAT_ID = "2049574618"
+last_telegram_alert_time = 0
+
+def send_telegram_photo_task(photo_bytes: bytes, caption: str):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
+    files = {"photo": ("alert.jpg", photo_bytes, "image/jpeg")}
+    data = {"chat_id": TELEGRAM_CHAT_ID, "caption": caption}
+    try:
+        response = requests.post(url, data=data, files=files, timeout=10)
+        print("Telegram Response:", response.text)
+    except Exception as e:
+        print("Telegram Send Error:", e)
 
 app = FastAPI(title="YOLOv8 Security API with Auth")
 
@@ -24,19 +42,23 @@ app.add_middleware(
 # --- AUTHENTICATION CONFIG ---
 SECRET_KEY = "YOLO_GUARD_SECRET_SUPER_SAFE_2026"
 ALGORITHM = "HS256"
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 model = None
 db = None
 
-# Hàm tạo mã băm mật khẩu
-def get_password_hash(password):
-    return pwd_context.hash(password)
+# Hàm tạo mã băm mật khẩu bằng bcrypt
+def get_password_hash(password: str) -> str:
+    pwd_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(password=pwd_bytes, salt=salt)
+    return hashed_password.decode('utf-8')
 
-# Hàm kiểm tra mật khẩu
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+# Hàm kiểm tra mật khẩu bằng bcrypt
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    password_byte_enc = plain_password.encode('utf-8')
+    hashed_password_bytes = hashed_password.encode('utf-8')
+    return bcrypt.checkpw(password=password_byte_enc, hashed_password=hashed_password_bytes)
 
 # Dependency xác thực Token (Bảo vệ các API)
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -109,11 +131,16 @@ async def predict(file: UploadFile = File(...), current_user: str = Depends(get_
         raise HTTPException(status_code=503, detail="Model is not loaded.")
     
     try:
+        global last_telegram_alert_time
         if db is not None:
             await db["stats"].update_one({"_id": "main"}, {"$inc": {"total_scans": 1}})
 
         contents = await file.read()
         image = Image.open(io.BytesIO(contents)).convert("RGB")
+        
+        # OpenCV decode for drawing
+        nparr = np.frombuffer(contents, np.uint8)
+        img_cv2 = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
         results = model.predict(image, conf=0.5, verbose=False)
         result = results[0]
@@ -128,15 +155,27 @@ async def predict(file: UploadFile = File(...), current_user: str = Depends(get_
                     "confidence": confidence,
                     "box": coords
                 })
+                # Draw Bounding Box and Label on OpenCV Image
+                x1, y1, x2, y2 = map(int, coords)
+                cv2.rectangle(img_cv2, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                label = f"NGUOI: {confidence*100:.0f}%"
+                (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+                cv2.rectangle(img_cv2, (x1, max(y1 - 25, 0)), (x1 + w, max(y1, 0)), (0, 0, 255), -1)
+                cv2.putText(img_cv2, label, (x1, max(y1 - 5, 0)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
         
         if len(persons) > 0:
             max_conf = max([p["confidence"] for p in persons]) * 100
+            now = datetime.datetime.now()
+            time_str = now.strftime("%Y-%m-%d %H:%M:%S")
+            time_str_short = now.strftime("%H:%M:%S")
+            
+            # Draw Watermark
+            cv2.putText(img_cv2, f"CAM-01 | {time_str}", (10, img_cv2.shape[0] - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+
             if db is not None:
                 await db["stats"].update_one({"_id": "main"}, {"$inc": {"total_alarms": 1}})
-                now = datetime.datetime.now()
-                time_str = now.strftime("%H:%M:%S")
                 await db["history"].insert_one({
-                    "time": time_str,
+                    "time": time_str_short,
                     "conf": f"{max_conf:.0f}",
                     "timestamp": now
                 })
@@ -146,6 +185,15 @@ async def predict(file: UploadFile = File(...), current_user: str = Depends(get_
                     oldest = await db["history"].find().sort("timestamp", 1).limit(count - 50).to_list(None)
                     for doc in oldest:
                         await db["history"].delete_one({"_id": doc["_id"]})
+
+            # Check anti-spam 30s before sending to Telegram
+            current_time = now.timestamp()
+            if current_time - last_telegram_alert_time > 30:
+                last_telegram_alert_time = current_time
+                _, buffer = cv2.imencode('.jpg', img_cv2)
+                img_bytes = buffer.tobytes()
+                caption = f"🚨 BÁO ĐỘNG CAM-01 🚨\n\nPhát hiện {len(persons)} đối tượng lạ!\nĐộ tin cậy cao nhất: {max_conf:.0f}%\nThời gian: {time_str}"
+                threading.Thread(target=send_telegram_photo_task, args=(img_bytes, caption)).start()
 
             return JSONResponse(content={
                 "status": "ALARM",
