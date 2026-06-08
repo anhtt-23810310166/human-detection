@@ -164,6 +164,7 @@ body {
     flex-direction: column;
     flex-grow: 1;
     min-height: 0;
+    gap: 20px;
 }
 .view-section.active {
     display: flex;
