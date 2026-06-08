@@ -15,7 +15,7 @@ import numpy as np
 import requests
 import threading
 
-TELEGRAM_BOT_TOKEN = "8903352640:AAG2FNzhrPoj8-UEzvkI8LRCq-KlXDY1GQM"
+TELEGRAM_BOT_TOKEN = "8903352640:AAG2FNzhrPoj8-UEzvkI8LRCq-KlXDYlGQM"
 TELEGRAM_CHAT_ID = "2049574618"
 last_telegram_alert_time = 0
 
