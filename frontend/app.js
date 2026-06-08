@@ -13,24 +13,127 @@ const systemStatusVal = document.getElementById('systemStatusVal');
 const personCountVal = document.getElementById('personCountVal');
 const personCountBox = document.getElementById('personCountBox');
 
-// --- DYNAMIC DATA STORAGE (LOCAL STORAGE) ---
-let detectionHistory = JSON.parse(localStorage.getItem('yolo_history') || '[]');
-let totalScans = parseInt(localStorage.getItem('yolo_scans') || '0');
-let totalAlarms = parseInt(localStorage.getItem('yolo_alarms') || '0');
+// --- Cài đặt Client-side ---
 let confidenceThreshold = parseInt(localStorage.getItem('yolo_conf') || '60');
-
-let isEngineRunning = false;
-let inferenceInterval = null;
-
-// --- INITIALIZE UI ---
-document.getElementById('totalScansVal').innerText = totalScans.toLocaleString();
-document.getElementById('totalAlarmsVal').innerText = totalAlarms.toLocaleString();
 const confSlider = document.getElementById('confidenceSlider');
 const confDisplay = document.getElementById('confidenceValueDisplay');
 confSlider.value = confidenceThreshold;
 confDisplay.innerText = confidenceThreshold + '%';
 
-renderHistoryTable();
+let isEngineRunning = false;
+let inferenceInterval = null;
+
+// --- DYNAMIC FETCH DATA (MONGODB VIA API) ---
+let globalHistory = [];
+
+async function fetchStats() {
+    try {
+        const res = await fetch('http://localhost:8080/stats');
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById('totalScansVal').innerText = (data.total_scans || 0).toLocaleString();
+            document.getElementById('totalAlarmsVal').innerText = (data.total_alarms || 0).toLocaleString();
+        }
+    } catch (e) {
+        console.error('Lỗi lấy thống kê', e);
+    }
+}
+
+async function fetchHistory() {
+    try {
+        const res = await fetch('http://localhost:8080/history');
+        if (res.ok) {
+            const history = await res.json();
+            globalHistory = history;
+            
+            // 1. Cập nhật Bảng
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '';
+            
+            if (history.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 30px;">Hệ thống chưa ghi nhận biến cố nào.</td></tr>`;
+            } else {
+                history.forEach(record => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${record.time}</td>
+                        <td style="color: var(--cyan); font-weight: bold;">${record.conf}%</td>
+                        <td><span class="tag high">Nguy hiểm</span></td>
+                        <td>Ghi nhận Đột nhập</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            
+            // 2. Cập nhật Biểu đồ
+            renderChart();
+        }
+    } catch (e) {
+        console.error('Lỗi lấy lịch sử', e);
+    }
+}
+
+// Gọi API lần đầu khi load trang
+fetchStats();
+fetchHistory();
+
+// --- CHART.JS ---
+let reportChart = null;
+
+function renderChart() {
+    const ctx = document.getElementById('reportChart').getContext('2d');
+    
+    // Dữ liệu từ MongoDB (Đã được xếp mới nhất ở đầu, cần đảo ngược để vẽ từ trái qua phải)
+    const reversedHistory = [...globalHistory].reverse();
+    
+    const labels = reversedHistory.map(r => r.time);
+    const dataPoints = reversedHistory.map(r => parseInt(r.conf));
+
+    if (reportChart) {
+        reportChart.data.labels = labels;
+        reportChart.data.datasets[0].data = dataPoints;
+        reportChart.update();
+    } else {
+        Chart.defaults.color = '#8b92a5';
+        Chart.defaults.font.family = 'Inter';
+        
+        reportChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Độ tin cậy (%)',
+                    data: dataPoints,
+                    borderColor: '#ff6b00',
+                    backgroundColor: 'rgba(255, 107, 0, 0.2)',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#00e5ff',
+                    pointBorderColor: '#000',
+                    pointRadius: 4,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+}
 
 // --- ADMIN SETTINGS ---
 confSlider.addEventListener('input', (e) => {
@@ -39,20 +142,19 @@ confSlider.addEventListener('input', (e) => {
     localStorage.setItem('yolo_conf', confidenceThreshold);
 });
 
-// --- CLEAR BUTTONS ---
-document.getElementById('clearHistoryBtn').addEventListener('click', () => {
-    detectionHistory = [];
-    localStorage.setItem('yolo_history', JSON.stringify(detectionHistory));
-    renderHistoryTable();
+// --- CLEAR BUTTONS (GỌI API XÓA) ---
+document.getElementById('clearHistoryBtn').addEventListener('click', async () => {
+    try {
+        await fetch('http://localhost:8080/history', { method: 'DELETE' });
+        fetchHistory(); // Tải lại bảng & biểu đồ
+    } catch (e) { console.error(e); }
 });
 
-document.getElementById('clearStatsBtn').addEventListener('click', () => {
-    totalScans = 0;
-    totalAlarms = 0;
-    localStorage.setItem('yolo_scans', '0');
-    localStorage.setItem('yolo_alarms', '0');
-    document.getElementById('totalScansVal').innerText = '0';
-    document.getElementById('totalAlarmsVal').innerText = '0';
+document.getElementById('clearStatsBtn').addEventListener('click', async () => {
+    try {
+        await fetch('http://localhost:8080/stats', { method: 'DELETE' });
+        fetchStats(); // Tải lại số
+    } catch (e) { console.error(e); }
 });
 
 // --- CLOCK ---
@@ -114,37 +216,10 @@ function drawBoxes(persons) {
     });
 }
 
-function renderHistoryTable() {
-    const tbody = document.getElementById('historyTableBody');
-    tbody.innerHTML = '';
-    
-    if (detectionHistory.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 30px;">Hệ thống chưa ghi nhận biến cố nào.</td></tr>`;
-        return;
-    }
-    
-    // Đảo ngược mảng để hiện sự kiện mới nhất lên đầu
-    [...detectionHistory].reverse().forEach(record => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${record.time}</td>
-            <td style="color: var(--cyan); font-weight: bold;">${record.conf}%</td>
-            <td><span class="tag high">Nguy hiểm</span></td>
-            <td>Ghi nhận Đột nhập</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
 async function analyzeFrame() {
     if (!isEngineRunning) return;
     captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
     
-    // Tăng biến đếm scan
-    totalScans++;
-    localStorage.setItem('yolo_scans', totalScans);
-    document.getElementById('totalScansVal').innerText = totalScans.toLocaleString();
-
     captureCanvas.toBlob(async (blob) => {
         const formData = new FormData();
         formData.append('file', blob, 'frame.jpg');
@@ -155,7 +230,10 @@ async function analyzeFrame() {
             });
             if (!response.ok) throw new Error("Mất kết nối Server");
             const result = await response.json();
+            
             updateStatus(result);
+            fetchStats();
+            
         } catch (error) {
             console.error(error);
         }
@@ -163,41 +241,21 @@ async function analyzeFrame() {
 }
 
 function updateStatus(result) {
-    // 1. Lọc kết quả dựa trên Độ nhạy (Threshold) của Admin
     let validPersons = [];
     if (result.persons) {
         validPersons = result.persons.filter(p => (p.confidence * 100) >= confidenceThreshold);
     }
 
     if (validPersons.length > 0) {
-        // Có báo động thực sự
         systemStatusVal.className = 'card-value danger';
         systemStatusVal.innerHTML = `<span class="icon">🚨</span> <span class="text">PHÁT HIỆN ĐỘT NHẬP</span>`;
         personCountVal.innerText = validPersons.length;
         personCountBox.classList.add('danger');
         
         drawBoxes(validPersons);
-
-        // Lưu vào Lịch sử
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
-        
-        // Lấy confidence cao nhất trong số những người phát hiện được
-        const maxConf = Math.max(...validPersons.map(p => p.confidence * 100)).toFixed(0);
-        
-        detectionHistory.push({ time: timeStr, conf: maxConf });
-        if (detectionHistory.length > 50) detectionHistory.shift(); // Chỉ giữ 50 bản ghi gần nhất
-        localStorage.setItem('yolo_history', JSON.stringify(detectionHistory));
-        
-        // Cập nhật số lần báo động
-        totalAlarms++;
-        localStorage.setItem('yolo_alarms', totalAlarms);
-        document.getElementById('totalAlarmsVal').innerText = totalAlarms.toLocaleString();
-        
-        renderHistoryTable();
+        fetchHistory(); // Sẽ tự động vẽ lại luôn Chart
     } 
     else {
-        // SAFE
         systemStatusVal.className = 'card-value safe';
         systemStatusVal.innerHTML = `<span class="icon">✅</span> <span class="text">An toàn</span>`;
         personCountVal.innerText = '0';
@@ -249,8 +307,15 @@ navItems.forEach(item => {
         const targetView = document.getElementById(targetId);
         if (targetView) {
             targetView.classList.add('active');
-            // Re-render bảng nếu vào tab Lịch sử
-            if (targetId === 'view-history') renderHistoryTable();
+            
+            // Re-fetch data when opening views
+            if (targetId === 'view-history') fetchHistory();
+            if (targetId === 'view-reports') fetchStats();
+            
+            // Fix chart resizing issue when changing tabs
+            if (targetId === 'view-analytics' && reportChart) {
+                reportChart.resize();
+            }
         }
     });
 });

@@ -6,6 +6,7 @@
     <title>YOLO Guard - Security Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="dashboard">
@@ -45,7 +46,7 @@
                         <li id="snapshotBtn">
                             <span class="icon">📸</span> Chụp ảnh Bằng chứng
                         </li>
-                        <li class="nav-item" data-target="view-reports">
+                        <li class="nav-item" data-target="view-analytics">
                             <span class="icon">📈</span> Báo cáo
                         </li>
                     </ul>
@@ -167,6 +168,17 @@
                             <h3 style="font-size: 14px; color: var(--text-muted);">Tổng số lần Báo động</h3>
                             <div style="font-size: 42px; font-weight: bold; margin-top: 10px; color: var(--orange);" id="totalAlarmsVal">0</div>
                         </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- VIEW: ANALYTICS (BIỂU ĐỒ) -->
+            <section id="view-analytics" class="view-section">
+                <div class="mockup-container" style="display: flex; flex-direction: column;">
+                    <h2>📈 Biểu đồ Mức độ Nguy hiểm</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 20px;">Dữ liệu độ tin cậy của AI (Confidence %) theo thời gian thực.</p>
+                    <div style="flex-grow: 1; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 20px; position: relative;">
+                        <canvas id="reportChart"></canvas>
                     </div>
                 </div>
             </section>
