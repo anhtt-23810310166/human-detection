@@ -11,6 +11,7 @@ Hệ thống Camera Giám sát An ninh Nhận diện Con người (Human Detecti
 ## 🚀 Tính năng nổi bật (Features)
 
 - **🔥 Dark Theme Command Center:** Giao diện Dashboard chuẩn doanh nghiệp, chia Tab (SPA) mượt mà không cần tải lại trang.
+- **🔐 Bảo mật JWT (JSON Web Token):** Màn hình Đăng nhập phủ mờ toàn trang. Backend khóa toàn bộ API, yêu cầu có thẻ Token hợp lệ sinh ra từ tài khoản mật khẩu mã hóa (Bcrypt) trên MongoDB.
 - **👁️ Nhận diện Real-time (YOLOv8):** Bắt trộm tốc độ cao trực tiếp trên luồng Camera bằng AI.
 - **🚨 Lưu vết Đột nhập (MongoDB):** Mọi sự cố báo động đều được ghi thẳng vào Cơ sở dữ liệu MongoDB ngầm, dữ liệu không bao giờ bị mất khi khởi động lại.
 - **📈 Phân tích Biểu đồ (Chart.js):** Tự động vẽ Biểu đồ Đường (Line Chart) mô phỏng mức độ nguy hiểm của các vụ đột nhập theo thời gian thực.

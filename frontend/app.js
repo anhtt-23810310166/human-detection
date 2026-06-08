@@ -22,13 +22,93 @@ confDisplay.innerText = confidenceThreshold + '%';
 
 let isEngineRunning = false;
 let inferenceInterval = null;
-
-// --- DYNAMIC FETCH DATA (MONGODB VIA API) ---
 let globalHistory = [];
 
-async function fetchStats() {
+// --- XỬ LÝ AUTHENTICATION (JWT) ---
+const loginOverlay = document.getElementById('loginOverlay');
+const mainDashboard = document.getElementById('mainDashboard');
+const loginForm = document.getElementById('loginForm');
+const loginErrorMsg = document.getElementById('loginErrorMsg');
+const logoutBtn = document.getElementById('logoutBtn');
+
+let jwtToken = localStorage.getItem('yolo_jwt');
+
+function getAuthHeaders() {
+    return {
+        'Authorization': `Bearer ${jwtToken}`
+    };
+}
+
+function handleUnauthorized() {
+    // Xóa token và hiển thị lại màn hình đăng nhập
+    localStorage.removeItem('yolo_jwt');
+    jwtToken = null;
+    mainDashboard.style.display = 'none';
+    loginOverlay.style.display = 'flex';
+    if (isEngineRunning) toggleBtn.click(); // Tắt AI
+}
+
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    loginErrorMsg.style.display = 'none';
+    
+    const username = document.getElementById('usernameInput').value;
+    const password = document.getElementById('passwordInput').value;
+    
+    const formData = new FormData();
+    formData.append('username', username);
+    formData.append('password', password);
+    
     try {
-        const res = await fetch('http://localhost:8080/stats');
+        const res = await fetch('http://localhost:8080/login', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            jwtToken = data.access_token;
+            localStorage.setItem('yolo_jwt', jwtToken);
+            
+            // Ẩn form login, hiện dashboard
+            loginOverlay.style.opacity = '0';
+            setTimeout(() => {
+                loginOverlay.style.display = 'none';
+                mainDashboard.style.display = 'flex';
+                // Bắt đầu các tác vụ ngầm
+                startWebcam();
+                fetchStats();
+                fetchHistory();
+            }, 500);
+        } else {
+            loginErrorMsg.style.display = 'block';
+        }
+    } catch (err) {
+        console.error("Lỗi đăng nhập:", err);
+        loginErrorMsg.innerText = "Không thể kết nối đến Máy chủ!";
+        loginErrorMsg.style.display = 'block';
+    }
+});
+
+logoutBtn.addEventListener('click', () => {
+    handleUnauthorized();
+});
+
+// Kiểm tra lúc mới mở trang
+if (jwtToken) {
+    loginOverlay.style.display = 'none';
+    mainDashboard.style.display = 'flex';
+    startWebcam();
+    fetchStats();
+    fetchHistory();
+}
+
+// --- DYNAMIC FETCH DATA (MONGODB VIA API) ---
+async function fetchStats() {
+    if (!jwtToken) return;
+    try {
+        const res = await fetch('http://localhost:8080/stats', { headers: getAuthHeaders() });
+        if (res.status === 401) return handleUnauthorized();
         if (res.ok) {
             const data = await res.json();
             document.getElementById('totalScansVal').innerText = (data.total_scans || 0).toLocaleString();
@@ -40,13 +120,14 @@ async function fetchStats() {
 }
 
 async function fetchHistory() {
+    if (!jwtToken) return;
     try {
-        const res = await fetch('http://localhost:8080/history');
+        const res = await fetch('http://localhost:8080/history', { headers: getAuthHeaders() });
+        if (res.status === 401) return handleUnauthorized();
         if (res.ok) {
             const history = await res.json();
             globalHistory = history;
             
-            // 1. Cập nhật Bảng
             const tbody = document.getElementById('historyTableBody');
             tbody.innerHTML = '';
             
@@ -64,8 +145,6 @@ async function fetchHistory() {
                     tbody.appendChild(tr);
                 });
             }
-            
-            // 2. Cập nhật Biểu đồ
             renderChart();
         }
     } catch (e) {
@@ -73,19 +152,12 @@ async function fetchHistory() {
     }
 }
 
-// Gọi API lần đầu khi load trang
-fetchStats();
-fetchHistory();
-
 // --- CHART.JS ---
 let reportChart = null;
 
 function renderChart() {
     const ctx = document.getElementById('reportChart').getContext('2d');
-    
-    // Dữ liệu từ MongoDB (Đã được xếp mới nhất ở đầu, cần đảo ngược để vẽ từ trái qua phải)
     const reversedHistory = [...globalHistory].reverse();
-    
     const labels = reversedHistory.map(r => r.time);
     const dataPoints = reversedHistory.map(r => parseInt(r.conf));
 
@@ -118,18 +190,10 @@ function renderChart() {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        grid: { color: 'rgba(255,255,255,0.05)' }
-                    },
-                    x: {
-                        grid: { color: 'rgba(255,255,255,0.05)' }
-                    }
+                    y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    x: { grid: { color: 'rgba(255,255,255,0.05)' } }
                 },
-                plugins: {
-                    legend: { display: false }
-                }
+                plugins: { legend: { display: false } }
             }
         });
     }
@@ -145,15 +209,15 @@ confSlider.addEventListener('input', (e) => {
 // --- CLEAR BUTTONS (GỌI API XÓA) ---
 document.getElementById('clearHistoryBtn').addEventListener('click', async () => {
     try {
-        await fetch('http://localhost:8080/history', { method: 'DELETE' });
-        fetchHistory(); // Tải lại bảng & biểu đồ
+        await fetch('http://localhost:8080/history', { method: 'DELETE', headers: getAuthHeaders() });
+        fetchHistory();
     } catch (e) { console.error(e); }
 });
 
 document.getElementById('clearStatsBtn').addEventListener('click', async () => {
     try {
-        await fetch('http://localhost:8080/stats', { method: 'DELETE' });
-        fetchStats(); // Tải lại số
+        await fetch('http://localhost:8080/stats', { method: 'DELETE', headers: getAuthHeaders() });
+        fetchStats();
     } catch (e) { console.error(e); }
 });
 
@@ -217,7 +281,7 @@ function drawBoxes(persons) {
 }
 
 async function analyzeFrame() {
-    if (!isEngineRunning) return;
+    if (!isEngineRunning || !jwtToken) return;
     captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
     
     captureCanvas.toBlob(async (blob) => {
@@ -226,11 +290,13 @@ async function analyzeFrame() {
         try {
             const response = await fetch('http://localhost:8080/predict', {
                 method: 'POST',
+                headers: getAuthHeaders(),
                 body: formData
             });
+            if (response.status === 401) return handleUnauthorized();
             if (!response.ok) throw new Error("Mất kết nối Server");
-            const result = await response.json();
             
+            const result = await response.json();
             updateStatus(result);
             fetchStats();
             
@@ -253,7 +319,7 @@ function updateStatus(result) {
         personCountBox.classList.add('danger');
         
         drawBoxes(validPersons);
-        fetchHistory(); // Sẽ tự động vẽ lại luôn Chart
+        fetchHistory();
     } 
     else {
         systemStatusVal.className = 'card-value safe';
@@ -307,15 +373,9 @@ navItems.forEach(item => {
         const targetView = document.getElementById(targetId);
         if (targetView) {
             targetView.classList.add('active');
-            
-            // Re-fetch data when opening views
             if (targetId === 'view-history') fetchHistory();
             if (targetId === 'view-reports') fetchStats();
-            
-            // Fix chart resizing issue when changing tabs
-            if (targetId === 'view-analytics' && reportChart) {
-                reportChart.resize();
-            }
+            if (targetId === 'view-analytics' && reportChart) reportChart.resize();
         }
     });
 });
@@ -341,5 +401,3 @@ snapshotBtn.addEventListener('click', () => {
     snapshotBtn.style.color = 'var(--cyan)';
     setTimeout(() => { snapshotBtn.style.color = ''; }, 500);
 });
-
-startWebcam();

@@ -3,3 +3,7 @@ uvicorn
 ultralytics
 python-multipart
 pillow
+motor
+PyJWT
+passlib
+bcrypt

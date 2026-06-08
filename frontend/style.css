@@ -305,3 +305,49 @@ video { width: 100%; height: 100%; object-fit: cover; }
 .slider-labels {
     display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);
 }
+
+/* Login Overlay */
+.login-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop') center/cover no-repeat;
+    display: flex; justify-content: center; align-items: center; z-index: 9999;
+}
+.login-overlay::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(14, 16, 21, 0.85); backdrop-filter: blur(8px);
+}
+.login-box {
+    position: relative; z-index: 2; background: rgba(22, 24, 29, 0.95);
+    border: 1px solid var(--border); border-radius: 12px; padding: 40px;
+    width: 400px; text-align: center; box-shadow: 0 0 30px rgba(0, 229, 255, 0.1);
+}
+.input-group {
+    margin-bottom: 20px; text-align: left;
+}
+.input-group label {
+    display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;
+}
+.input-group input {
+    width: 100%; padding: 12px 16px; background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+    border-radius: 6px; color: #fff; font-family: 'Inter', sans-serif; outline: none; transition: all 0.3s;
+}
+.input-group input:focus {
+    border-color: var(--cyan); box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
+}
+.error-msg {
+    color: var(--red); font-size: 13px; margin-bottom: 20px; animation: shake 0.5s;
+}
+.login-btn {
+    width: 100%; padding: 14px; background: linear-gradient(135deg, var(--orange), #ff3300);
+    border: none; border-radius: 6px; color: #fff; font-weight: 700; font-family: 'Inter', sans-serif;
+    letter-spacing: 1px; cursor: pointer; transition: all 0.3s;
+}
+.login-btn:hover {
+    box-shadow: 0 0 20px rgba(255, 107, 0, 0.5); transform: translateY(-2px);
+}
+.logout-btn {
+    width: 100%; background: transparent; border: 1px solid var(--border);
+    color: var(--text-muted); padding: 8px; border-radius: 6px; cursor: pointer;
+    font-family: 'Inter', sans-serif; font-size: 12px; transition: all 0.3s; margin-top: 10px;
+}
+.logout-btn:hover { background: rgba(255, 51, 51, 0.1); border-color: var(--red); color: var(--red); }

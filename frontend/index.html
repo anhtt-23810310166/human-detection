@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,125 +9,141 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="dashboard">
-        <!-- SIDEBAR -->
-        <aside class="sidebar">
-            <div class="logo-section">
-                <div class="logo-icon">YG</div>
-                <h2>YOLO GUARD</h2>
-            </div>
+    <!-- MÀN HÌNH ĐĂNG NHẬP (LOGIN OVERLAY) -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-box">
+            <h1 class="logo" style="margin-bottom: 30px; padding: 0;">
+                YOLO <span class="highlight">GUARD</span>
+            </h1>
+            <p style="color: var(--text-muted); margin-bottom: 24px;">Truy cập Hệ thống An ninh</p>
             
-            <div class="menu-wrapper">
-                <div class="menu-section">
+            <form id="loginForm">
+                <div class="input-group">
+                    <label>Tài khoản</label>
+                    <input type="text" id="usernameInput" value="admin" required>
+                </div>
+                <div class="input-group">
+                    <label>Mật mã</label>
+                    <input type="password" id="passwordInput" placeholder="Nhập admin123" required>
+                </div>
+                <p id="loginErrorMsg" class="error-msg" style="display: none;">Tài khoản hoặc mật khẩu không đúng!</p>
+                <button type="submit" class="login-btn">ENTER COMMAND CENTER</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD (BỊ ẨN KHI CHƯA LOGIN) -->
+    <div class="dashboard" id="mainDashboard" style="display: none;">
+        <!-- Sidebar (Left) -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="logo">YOLO <span class="highlight">GUARD</span></h1>
+                <p class="subtitle">ENTERPRISE EDITION</p>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
                     <h3>HỆ THỐNG</h3>
                     <ul>
                         <li class="nav-item active" data-target="view-dashboard">
-                            <span class="icon">📹</span> Giám sát
-                            <span class="badge-small">LIVE</span>
-                        </li>
-                        <li id="toggleEngineBtn">
-                            <span class="icon">⚡</span> Khởi động AI
-                        </li>
-                        <li class="nav-item" data-target="view-admin">
-                            <span class="icon">📊</span> Quản trị
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="menu-section">
-                    <h3>PHÍM TẮT</h3>
-                    <ul>
-                        <li class="nav-item" data-target="view-reports">
-                            <span class="icon">👥</span> Kiểm soát Quân số
+                            <span class="icon">📷</span> Camera Giám sát
                         </li>
                         <li class="nav-item" data-target="view-history">
                             <span class="icon">🚨</span> Lịch sử Đột nhập
                         </li>
+                        <li class="nav-item" data-target="view-reports">
+                            <span class="icon">👥</span> Kiểm soát Quân số
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <h3>PHÍM TẮT</h3>
+                    <ul>
                         <li id="snapshotBtn">
                             <span class="icon">📸</span> Chụp ảnh Bằng chứng
                         </li>
                         <li class="nav-item" data-target="view-analytics">
                             <span class="icon">📈</span> Báo cáo
                         </li>
+                        <li class="nav-item" data-target="view-admin">
+                            <span class="icon">⚙️</span> Quản trị
+                        </li>
                     </ul>
                 </div>
-            </div>
+            </nav>
 
             <div class="sidebar-footer">
                 <div class="user-profile">
-                    <div class="avatar">Q</div>
+                    <div class="avatar">AD</div>
                     <div class="user-info">
-                        <span class="name">Quản trị viên</span>
-                        <span class="role">Super Admin</span>
+                        <p class="name">Administrator</p>
+                        <p class="role">Super Admin</p>
                     </div>
-                    <span class="dropdown-icon">▼</span>
                 </div>
-                <div class="system-status-indicator">
-                    <div class="dot"></div>
-                    <span>Trạng thái: Đang hoạt động</span>
-                </div>
+                <button id="logoutBtn" class="logout-btn">Đăng xuất</button>
             </div>
         </aside>
 
-        <!-- MAIN CONTENT -->
-        <main class="main-area">
-            <header class="top-bar">
-                <div class="header-title">
-                    <div class="fire-icon">🚨</div>
-                    <div class="title-text">
-                        <h1>TRUNG TÂM GIÁM SÁT AN NINH</h1>
-                        <span class="subtitle">AI DETECTION SYSTEM - YOLOv8 - BỘ ĐIỀU KHIỂN TRUNG TÂM</span>
+        <!-- Main Content Area (Right) -->
+        <main class="main-content">
+            <!-- VIEW: DASHBOARD (CAMERA) -->
+            <section id="view-dashboard" class="view-section active">
+                <div class="video-container">
+                    <div class="video-header">
+                        <div class="cam-info">
+                            <span class="live-dot"></span>
+                            <span class="cam-name">CAM-01: CỬA CHÍNH</span>
+                        </div>
+                        <div class="cam-stats">
+                            <span class="badge">YOLOv8</span>
+                            <span class="badge time" id="liveTimestamp">00:00:00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="video-wrapper">
+                        <!-- Video gốc lấy từ Webcam -->
+                        <video id="webcam" autoplay playsinline muted></video>
+                        <!-- Canvas dùng để trích xuất frame gửi lên server -->
+                        <canvas id="captureCanvas"></canvas>
+                        <!-- Canvas dùng để vẽ Bounding Box đè lên Video -->
+                        <canvas id="overlayCanvas"></canvas>
+                        
+                        <div class="crosshair-center"></div>
+                        <div class="corner-borders"></div>
+                    </div>
+
+                    <div class="video-footer">
+                        <button id="toggleEngineBtn" class="engine-btn">
+                            <span class="icon">⚡</span> Khởi động AI
+                        </button>
+                        <div class="engine-status" id="engineStatusBadge">AI: ĐANG CHỜ LỆNH</div>
                     </div>
                 </div>
-            </header>
 
-            <!-- VIEW: DASHBOARD (Màn hình chính) -->
-            <section id="view-dashboard" class="view-section active">
-                <div class="content-wrapper">
-                    <div class="video-section">
-                        <div class="video-container">
-                            <!-- Overlays -->
-                            <div class="video-header-overlay">
-                                <div class="timestamp" id="liveTimestamp">Loading...</div>
-                                <div class="badges">
-                                    <span class="badge-direct"><span class="dot-blink"></span> TRỰC TIẾP</span>
-                                    <span class="badge-yolo">YOLOv8</span>
-                                    <span class="badge-cam">CAM-01</span>
-                                </div>
-                            </div>
-                            
-                            <video id="webcam" autoplay playsinline></video>
-                            <canvas id="overlayCanvas"></canvas>
-                            <canvas id="captureCanvas" style="display: none;"></canvas>
-                            
-                            <div class="video-footer-overlay">
-                               <span class="engine-badge" id="engineStatusBadge">AI: ĐANG CHỜ LỆNH</span>
-                            </div>
+                <!-- Live Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>TRẠNG THÁI HỆ THỐNG</h3>
+                        <div class="card-value safe" id="systemStatusVal">
+                            <span class="icon">✅</span> <span class="text">Hệ thống Tạm dừng</span>
                         </div>
                     </div>
-
-                    <div class="bottom-cards">
-                        <div class="status-card">
-                            <h3 class="card-title"><span class="dot-title"></span> TRẠNG THÁI HỆ THỐNG</h3>
-                            <div class="card-value safe" id="systemStatusVal">
-                                <span class="icon">✅</span> <span class="text">An toàn</span>
-                            </div>
-                        </div>
-                        <div class="status-card">
-                            <h3 class="card-title"><span class="dot-title"></span> SỐ LƯỢNG ĐỐI TƯỢNG</h3>
-                            <div class="card-value count" id="personCountBox">
-                                <span class="number" id="personCountVal">0</span> <span class="unit">người</span>
-                            </div>
+                    <div class="stat-card" id="personCountBox">
+                        <h3>SỐ LƯỢNG ĐỐI TƯỢNG</h3>
+                        <div class="card-value count">
+                            <span class="number" id="personCountVal">0</span>
+                            <span class="unit">NGƯỜI</span>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- VIEW: LỊCH SỬ ĐỘT NHẬP (Dữ liệu Thật) -->
+            <!-- VIEW: LỊCH SỬ ĐỘT NHẬP -->
             <section id="view-history" class="view-section">
                 <div class="mockup-container">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                        <h2>🚨 Lịch sử Phát hiện Đột nhập</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2>🚨 Bằng chứng Đột nhập</h2>
                         <button id="clearHistoryBtn" class="action-btn-small">Xóa Lịch sử</button>
                     </div>
                     <div class="table-scroll">
@@ -137,36 +153,36 @@
                                     <th>Thời gian</th>
                                     <th>Độ tin cậy</th>
                                     <th>Mức độ</th>
-                                    <th>Hành động</th>
+                                    <th>Trạng thái</th>
                                 </tr>
                             </thead>
                             <tbody id="historyTableBody">
-                                <!-- Dữ liệu sẽ được JS đẩy vào đây -->
-                                <tr>
-                                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 30px;">Hệ thống chưa ghi nhận biến cố nào.</td>
-                                </tr>
+                                <!-- Render by JS -->
                             </tbody>
                         </table>
                     </div>
                 </div>
             </section>
 
-            <!-- VIEW: BÁO CÁO (Dữ liệu Thật) -->
+            <!-- VIEW: BÁO CÁO QUÂN SỐ -->
             <section id="view-reports" class="view-section">
                 <div class="mockup-container">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                        <h2>📈 Báo cáo & Thống kê Quân số</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2>👥 Tổng quan Quân số</h2>
                         <button id="clearStatsBtn" class="action-btn-small">Reset Thống kê</button>
                     </div>
-                    <p style="color: var(--text-muted); margin-bottom: 20px;">Dữ liệu tổng hợp từ phiên làm việc hiện tại.</p>
-                    <div style="display: flex; gap: 20px; margin-bottom: 30px;">
-                        <div style="flex: 1; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; text-align: center;">
-                            <h3 style="font-size: 14px; color: var(--text-muted);">Tổng lượt quét (Frames)</h3>
-                            <div style="font-size: 42px; font-weight: bold; margin-top: 10px; color: var(--cyan);" id="totalScansVal">0</div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>TỔNG SỐ LƯỢT QUÉT (FRAMES)</h3>
+                            <div class="card-value count">
+                                <span class="number" id="totalScansVal">0</span>
+                            </div>
                         </div>
-                        <div style="flex: 1; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; text-align: center;">
-                            <h3 style="font-size: 14px; color: var(--text-muted);">Tổng số lần Báo động</h3>
-                            <div style="font-size: 42px; font-weight: bold; margin-top: 10px; color: var(--orange);" id="totalAlarmsVal">0</div>
+                        <div class="stat-card">
+                            <h3>TỔNG SỐ LẦN PHÁT HIỆN</h3>
+                            <div class="card-value count" style="color: var(--orange);">
+                                <span class="number" id="totalAlarmsVal">0</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -186,21 +202,20 @@
             <!-- VIEW: QUẢN TRỊ (Cài đặt thật) -->
             <section id="view-admin" class="view-section">
                 <div class="mockup-container">
-                    <h2>⚙️ Cài đặt Trí tuệ Nhân tạo (YOLOv8)</h2>
-                    <p style="color: var(--text-muted); margin-bottom: 30px;">Điều chỉnh các tham số cốt lõi để tối ưu hóa khả năng nhận diện.</p>
+                    <h2>⚙️ Bảng Điều khiển Hệ thống</h2>
                     
-                    <div class="settings-card">
+                    <div class="settings-card" style="margin-top: 20px;">
                         <div class="setting-header">
                             <div>
-                                <h3>Độ nhạy AI (Confidence Threshold)</h3>
-                                <p>AI sẽ bỏ qua các phát hiện có độ tin cậy thấp hơn mức này.</p>
+                                <h3>Độ Nhạy Phân Tích (Confidence Threshold)</h3>
+                                <p>AI sẽ bỏ qua các nhận diện có độ tin cậy thấp hơn ngưỡng này.</p>
                             </div>
                             <div class="slider-value" id="confidenceValueDisplay">60%</div>
                         </div>
-                        <input type="range" id="confidenceSlider" class="custom-slider" min="10" max="95" value="60">
+                        <input type="range" id="confidenceSlider" class="custom-slider" min="10" max="95" value="60" step="5">
                         <div class="slider-labels">
-                            <span>Nhạy (Dễ báo nhầm)</span>
-                            <span>Chính xác (Khó báo nhầm)</span>
+                            <span>Thấp (Báo động giả nhiều)</span>
+                            <span>Cao (Bỏ lót nhiều)</span>
                         </div>
                     </div>
                 </div>
