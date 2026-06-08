@@ -13,10 +13,49 @@ const systemStatusVal = document.getElementById('systemStatusVal');
 const personCountVal = document.getElementById('personCountVal');
 const personCountBox = document.getElementById('personCountBox');
 
+// --- DYNAMIC DATA STORAGE (LOCAL STORAGE) ---
+let detectionHistory = JSON.parse(localStorage.getItem('yolo_history') || '[]');
+let totalScans = parseInt(localStorage.getItem('yolo_scans') || '0');
+let totalAlarms = parseInt(localStorage.getItem('yolo_alarms') || '0');
+let confidenceThreshold = parseInt(localStorage.getItem('yolo_conf') || '60');
+
 let isEngineRunning = false;
 let inferenceInterval = null;
 
-// Clock
+// --- INITIALIZE UI ---
+document.getElementById('totalScansVal').innerText = totalScans.toLocaleString();
+document.getElementById('totalAlarmsVal').innerText = totalAlarms.toLocaleString();
+const confSlider = document.getElementById('confidenceSlider');
+const confDisplay = document.getElementById('confidenceValueDisplay');
+confSlider.value = confidenceThreshold;
+confDisplay.innerText = confidenceThreshold + '%';
+
+renderHistoryTable();
+
+// --- ADMIN SETTINGS ---
+confSlider.addEventListener('input', (e) => {
+    confidenceThreshold = parseInt(e.target.value);
+    confDisplay.innerText = confidenceThreshold + '%';
+    localStorage.setItem('yolo_conf', confidenceThreshold);
+});
+
+// --- CLEAR BUTTONS ---
+document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+    detectionHistory = [];
+    localStorage.setItem('yolo_history', JSON.stringify(detectionHistory));
+    renderHistoryTable();
+});
+
+document.getElementById('clearStatsBtn').addEventListener('click', () => {
+    totalScans = 0;
+    totalAlarms = 0;
+    localStorage.setItem('yolo_scans', '0');
+    localStorage.setItem('yolo_alarms', '0');
+    document.getElementById('totalScansVal').innerText = '0';
+    document.getElementById('totalAlarmsVal').innerText = '0';
+});
+
+// --- CLOCK ---
 setInterval(() => {
     const now = new Date();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -75,9 +114,37 @@ function drawBoxes(persons) {
     });
 }
 
+function renderHistoryTable() {
+    const tbody = document.getElementById('historyTableBody');
+    tbody.innerHTML = '';
+    
+    if (detectionHistory.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 30px;">Hệ thống chưa ghi nhận biến cố nào.</td></tr>`;
+        return;
+    }
+    
+    // Đảo ngược mảng để hiện sự kiện mới nhất lên đầu
+    [...detectionHistory].reverse().forEach(record => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${record.time}</td>
+            <td style="color: var(--cyan); font-weight: bold;">${record.conf}%</td>
+            <td><span class="tag high">Nguy hiểm</span></td>
+            <td>Ghi nhận Đột nhập</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
 async function analyzeFrame() {
     if (!isEngineRunning) return;
     captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+    
+    // Tăng biến đếm scan
+    totalScans++;
+    localStorage.setItem('yolo_scans', totalScans);
+    document.getElementById('totalScansVal').innerText = totalScans.toLocaleString();
+
     captureCanvas.toBlob(async (blob) => {
         const formData = new FormData();
         formData.append('file', blob, 'frame.jpg');
@@ -96,15 +163,41 @@ async function analyzeFrame() {
 }
 
 function updateStatus(result) {
-    if (result.status === "ALARM") {
+    // 1. Lọc kết quả dựa trên Độ nhạy (Threshold) của Admin
+    let validPersons = [];
+    if (result.persons) {
+        validPersons = result.persons.filter(p => (p.confidence * 100) >= confidenceThreshold);
+    }
+
+    if (validPersons.length > 0) {
+        // Có báo động thực sự
         systemStatusVal.className = 'card-value danger';
         systemStatusVal.innerHTML = `<span class="icon">🚨</span> <span class="text">PHÁT HIỆN ĐỘT NHẬP</span>`;
-        const count = result.persons ? result.persons.length : 0;
-        personCountVal.innerText = count;
+        personCountVal.innerText = validPersons.length;
         personCountBox.classList.add('danger');
-        if (result.persons) drawBoxes(result.persons);
+        
+        drawBoxes(validPersons);
+
+        // Lưu vào Lịch sử
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+        
+        // Lấy confidence cao nhất trong số những người phát hiện được
+        const maxConf = Math.max(...validPersons.map(p => p.confidence * 100)).toFixed(0);
+        
+        detectionHistory.push({ time: timeStr, conf: maxConf });
+        if (detectionHistory.length > 50) detectionHistory.shift(); // Chỉ giữ 50 bản ghi gần nhất
+        localStorage.setItem('yolo_history', JSON.stringify(detectionHistory));
+        
+        // Cập nhật số lần báo động
+        totalAlarms++;
+        localStorage.setItem('yolo_alarms', totalAlarms);
+        document.getElementById('totalAlarmsVal').innerText = totalAlarms.toLocaleString();
+        
+        renderHistoryTable();
     } 
     else {
+        // SAFE
         systemStatusVal.className = 'card-value safe';
         systemStatusVal.innerHTML = `<span class="icon">✅</span> <span class="text">An toàn</span>`;
         personCountVal.innerText = '0';
@@ -145,21 +238,19 @@ const viewSections = document.querySelectorAll('.view-section');
 
 navItems.forEach(item => {
     item.addEventListener('click', () => {
-        // Remove active class from all nav items
         navItems.forEach(nav => nav.classList.remove('active'));
-        // Add active class to clicked item
         item.classList.add('active');
         
-        // Hide all views
         viewSections.forEach(view => {
             view.classList.remove('active');
         });
         
-        // Show target view
         const targetId = item.getAttribute('data-target');
         const targetView = document.getElementById(targetId);
         if (targetView) {
             targetView.classList.add('active');
+            // Re-render bảng nếu vào tab Lịch sử
+            if (targetId === 'view-history') renderHistoryTable();
         }
     });
 });
@@ -167,17 +258,13 @@ navItems.forEach(item => {
 // Snapshot Logic
 const snapshotBtn = document.getElementById('snapshotBtn');
 snapshotBtn.addEventListener('click', () => {
-    // 1. Draw video frame to capture canvas
     captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-    // 2. Draw overlay (bounding boxes) on top of capture canvas
     captureCtx.drawImage(overlayCanvas, 0, 0);
     
-    // 3. Download the merged image
     const dataURL = captureCanvas.toDataURL('image/jpeg', 1.0);
     const a = document.createElement('a');
     a.href = dataURL;
     
-    // Add timestamp to filename
     const now = new Date();
     const timeStr = `${now.getHours()}${now.getMinutes()}${now.getSeconds()}`;
     a.download = `YOLO_Snapshot_${timeStr}.jpg`;
@@ -186,7 +273,6 @@ snapshotBtn.addEventListener('click', () => {
     a.click();
     document.body.removeChild(a);
     
-    // Feedback effect
     snapshotBtn.style.color = 'var(--cyan)';
     setTimeout(() => { snapshotBtn.style.color = ''; }, 500);
 });

@@ -122,68 +122,75 @@
                 </div>
             </section>
 
-            <!-- VIEW: LỊCH SỬ ĐỘT NHẬP (Giả lập) -->
+            <!-- VIEW: LỊCH SỬ ĐỘT NHẬP (Dữ liệu Thật) -->
             <section id="view-history" class="view-section">
                 <div class="mockup-container">
-                    <h2>🚨 Lịch sử Phát hiện Đột nhập</h2>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Thời gian</th>
-                                <th>Camera</th>
-                                <th>Mức độ</th>
-                                <th>Hành động</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Vừa xong</td>
-                                <td>CAM-01 (YOLOv8 Core)</td>
-                                <td><span class="tag high">Nguy hiểm</span></td>
-                                <td>Đã ghi hình & Cảnh báo âm thanh</td>
-                            </tr>
-                            <tr>
-                                <td>10 phút trước</td>
-                                <td>CAM-01 (YOLOv8 Core)</td>
-                                <td><span class="tag low">Bình thường</span></td>
-                                <td>Phát hiện 2 người đi ngang qua</td>
-                            </tr>
-                            <tr>
-                                <td>1 giờ trước</td>
-                                <td>CAM-02 (Hành lang)</td>
-                                <td><span class="tag high">Nguy hiểm</span></td>
-                                <td>Gửi SMS cho Admin</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <h2>🚨 Lịch sử Phát hiện Đột nhập</h2>
+                        <button id="clearHistoryBtn" class="action-btn-small">Xóa Lịch sử</button>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Thời gian</th>
+                                    <th>Độ tin cậy</th>
+                                    <th>Mức độ</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <!-- Dữ liệu sẽ được JS đẩy vào đây -->
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 30px;">Hệ thống chưa ghi nhận biến cố nào.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
 
-            <!-- VIEW: BÁO CÁO (Giả lập) -->
+            <!-- VIEW: BÁO CÁO (Dữ liệu Thật) -->
             <section id="view-reports" class="view-section">
                 <div class="mockup-container">
-                    <h2>📈 Báo cáo & Thống kê Quân số</h2>
-                    <p style="color: var(--text-muted); margin-bottom: 20px;">Dữ liệu tổng hợp từ hệ thống AI trong 24 giờ qua.</p>
-                    <div style="display: flex; gap: 20px; margin-bottom: 30px;">
-                        <div style="flex: 1; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px;">
-                            <h3 style="font-size: 14px; color: var(--text-muted);">Tổng lượt người quét được</h3>
-                            <div style="font-size: 32px; font-weight: bold; margin-top: 10px; color: var(--cyan);">1,248</div>
-                        </div>
-                        <div style="flex: 1; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px;">
-                            <h3 style="font-size: 14px; color: var(--text-muted);">Tổng số cảnh báo</h3>
-                            <div style="font-size: 32px; font-weight: bold; margin-top: 10px; color: var(--orange);">12</div>
-                        </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <h2>📈 Báo cáo & Thống kê Quân số</h2>
+                        <button id="clearStatsBtn" class="action-btn-small">Reset Thống kê</button>
                     </div>
-                    <div style="width: 100%; height: 200px; background: rgba(255,255,255,0.02); border: 1px dashed var(--border); border-radius: 8px; display: flex; justify-content: center; align-items: center; color: var(--text-muted);">
-                        [Biểu đồ Thống kê giả lập sẽ hiển thị ở đây]
+                    <p style="color: var(--text-muted); margin-bottom: 20px;">Dữ liệu tổng hợp từ phiên làm việc hiện tại.</p>
+                    <div style="display: flex; gap: 20px; margin-bottom: 30px;">
+                        <div style="flex: 1; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; text-align: center;">
+                            <h3 style="font-size: 14px; color: var(--text-muted);">Tổng lượt quét (Frames)</h3>
+                            <div style="font-size: 42px; font-weight: bold; margin-top: 10px; color: var(--cyan);" id="totalScansVal">0</div>
+                        </div>
+                        <div style="flex: 1; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; text-align: center;">
+                            <h3 style="font-size: 14px; color: var(--text-muted);">Tổng số lần Báo động</h3>
+                            <div style="font-size: 42px; font-weight: bold; margin-top: 10px; color: var(--orange);" id="totalAlarmsVal">0</div>
+                        </div>
                     </div>
                 </div>
             </section>
             
+            <!-- VIEW: QUẢN TRỊ (Cài đặt thật) -->
             <section id="view-admin" class="view-section">
                 <div class="mockup-container">
-                    <h2>⚙️ Bảng Điều Khiển Quản Trị</h2>
-                    <p style="color: var(--text-muted);">Phân quyền người dùng, quản lý chuỗi Camera và sao lưu dữ liệu Đám mây.</p>
+                    <h2>⚙️ Cài đặt Trí tuệ Nhân tạo (YOLOv8)</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 30px;">Điều chỉnh các tham số cốt lõi để tối ưu hóa khả năng nhận diện.</p>
+                    
+                    <div class="settings-card">
+                        <div class="setting-header">
+                            <div>
+                                <h3>Độ nhạy AI (Confidence Threshold)</h3>
+                                <p>AI sẽ bỏ qua các phát hiện có độ tin cậy thấp hơn mức này.</p>
+                            </div>
+                            <div class="slider-value" id="confidenceValueDisplay">60%</div>
+                        </div>
+                        <input type="range" id="confidenceSlider" class="custom-slider" min="10" max="95" value="60">
+                        <div class="slider-labels">
+                            <span>Nhạy (Dễ báo nhầm)</span>
+                            <span>Chính xác (Khó báo nhầm)</span>
+                        </div>
+                    </div>
                 </div>
             </section>
 
