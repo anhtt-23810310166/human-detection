@@ -6,51 +6,55 @@ const overlayCanvas = document.getElementById('overlayCanvas');
 const overlayCtx = overlayCanvas.getContext('2d');
 
 const toggleBtn = document.getElementById('toggleEngineBtn');
-const scanLine = document.querySelector('.scan-line');
+const engineStatusBadge = document.getElementById('engineStatusBadge');
+const liveTimestamp = document.getElementById('liveTimestamp');
 
-const statusIndicator = document.getElementById('statusIndicator');
-const statusText = document.getElementById('statusText');
-const statusIcon = document.getElementById('statusIcon');
-const logList = document.getElementById('logList');
+const systemStatusVal = document.getElementById('systemStatusVal');
+const personCountVal = document.getElementById('personCountVal');
+const personCountBox = document.getElementById('personCountBox');
 
 let isEngineRunning = false;
 let inferenceInterval = null;
 
-// Cập nhật đồng hồ
+// Cập nhật đồng hồ giống format trong ảnh: 07-31-2020 Fri 09:07:12 PM
 setInterval(() => {
     const now = new Date();
-    document.getElementById('systemTime').innerText = now.toLocaleTimeString('en-US', { hour12: false });
+    
+    // Format Date: MM-DD-YYYY
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const date = String(now.getDate()).padStart(2, '0');
+    const year = now.getFullYear();
+    
+    // Format Day
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const day = days[now.getDay()];
+    
+    // Format Time: hh:mm:ss A
+    let hours = now.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+    const strTime = String(hours).padStart(2, '0') + ':' + 
+                    String(now.getMinutes()).padStart(2, '0') + ':' + 
+                    String(now.getSeconds()).padStart(2, '0') + ' ' + ampm;
+    
+    liveTimestamp.innerText = `${month}-${date}-${year} ${day} ${strTime}`;
 }, 1000);
-
-function addLog(msg, type = 'info') {
-    const li = document.createElement('li');
-    const time = new Date().toLocaleTimeString('en-US', { hour12: false });
-    
-    let color = 'inherit';
-    if(type === 'alarm') color = 'var(--alarm)';
-    if(type === 'safe') color = 'var(--safe)';
-    
-    li.innerHTML = `<span class="log-time">[${time}]</span> <span style="color:${color}; font-weight:500;">${msg}</span>`;
-    logList.prepend(li);
-    if(logList.children.length > 20) logList.removeChild(logList.lastChild);
-}
 
 async function startWebcam() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
         video.srcObject = stream;
         
-        // Chờ video play để lấy kích thước thật
         video.onloadedmetadata = () => {
             overlayCanvas.width = video.videoWidth;
             overlayCanvas.height = video.videoHeight;
             captureCanvas.width = video.videoWidth;
             captureCanvas.height = video.videoHeight;
         };
-        addLog('Đã kết nối Camera', 'safe');
     } catch (err) {
-        addLog(`Lỗi Camera: ${err.message}`, 'alarm');
-        statusText.innerText = 'LỖI CAMERA';
+        systemStatusVal.innerHTML = `<span class="icon">❌</span> <span class="text">LỖI CAMERA</span>`;
+        systemStatusVal.className = 'card-value danger';
     }
 }
 
@@ -68,17 +72,17 @@ function drawBoxes(persons) {
         const height = y2 - y1;
         const conf = (person.confidence * 100).toFixed(0);
 
-        // Vẽ Khung
-        overlayCtx.strokeStyle = '#ef4444'; // Red
+        // Vẽ Khung màu Đỏ Cam
+        overlayCtx.strokeStyle = '#ff3333'; 
         overlayCtx.lineWidth = 3;
         overlayCtx.strokeRect(x1, y1, width, height);
 
         // Vẽ nhãn (Label)
-        overlayCtx.fillStyle = '#ef4444';
+        overlayCtx.fillStyle = '#ff3333';
         overlayCtx.fillRect(x1, y1 - 25, 110, 25);
         
         overlayCtx.fillStyle = '#ffffff';
-        overlayCtx.font = '16px Inter, sans-serif';
+        overlayCtx.font = 'bold 14px Inter, sans-serif';
         overlayCtx.fillText(`NGƯỜI ${conf}%`, x1 + 5, y1 - 7);
     });
 }
@@ -110,26 +114,28 @@ async function analyzeFrame() {
 }
 
 function updateStatus(result) {
-    statusIndicator.className = 'status-indicator';
-    
     if (result.status === "ALARM") {
-        statusIndicator.classList.add('alarm');
-        statusIcon.innerText = '👤'; 
-        statusText.innerText = result.message;
-        addLog(`Cảnh báo: ${result.message}`, 'alarm');
+        // Update Status Card
+        systemStatusVal.className = 'card-value danger';
+        systemStatusVal.innerHTML = `<span class="icon">🚨</span> <span class="text">PHÁT HIỆN ĐỘT NHẬP</span>`;
         
-        // Vẽ box
+        // Update Count
+        const count = result.persons ? result.persons.length : 0;
+        personCountVal.innerText = count;
+        personCountBox.classList.add('danger');
+        
         if (result.persons) {
             drawBoxes(result.persons);
         }
     } 
     else {
         // SAFE
-        statusIndicator.classList.add('safe');
-        statusIcon.innerText = '🛡️';
-        statusText.innerText = result.message;
+        systemStatusVal.className = 'card-value safe';
+        systemStatusVal.innerHTML = `<span class="icon">✅</span> <span class="text">An toàn</span>`;
         
-        // Không có người thì xóa các box trên màn hình
+        personCountVal.innerText = '0';
+        personCountBox.classList.remove('danger');
+        
         clearOverlay();
     }
 }
@@ -138,28 +144,30 @@ toggleBtn.addEventListener('click', () => {
     isEngineRunning = !isEngineRunning;
     
     if (isEngineRunning) {
-        toggleBtn.innerText = 'TẮT AI ENGINE';
+        toggleBtn.innerHTML = `<span class="icon">⏹️</span> Dừng AI`;
         toggleBtn.classList.add('active');
-        scanLine.style.display = 'block';
         
-        statusIndicator.className = 'status-indicator';
-        statusIcon.innerText = '👁️';
-        statusText.innerText = 'Đang quét ảnh...';
+        engineStatusBadge.innerText = 'AI: ĐANG HOẠT ĐỘNG';
+        engineStatusBadge.style.color = '#00e676';
+        engineStatusBadge.style.borderColor = '#00e676';
         
-        addLog('Bật hệ thống AI Phát hiện Người.', 'info');
-        inferenceInterval = setInterval(analyzeFrame, 800); // Gửi nhanh hơn xíu
+        inferenceInterval = setInterval(analyzeFrame, 800);
     } else {
-        toggleBtn.innerText = 'BẬT AI ENGINE';
+        toggleBtn.innerHTML = `<span class="icon">⚡</span> Khởi động AI`;
         toggleBtn.classList.remove('active');
-        scanLine.style.display = 'none';
+        
+        engineStatusBadge.innerText = 'AI: ĐANG CHỜ LỆNH';
+        engineStatusBadge.style.color = '#00e5ff';
+        engineStatusBadge.style.borderColor = '#00e5ff';
+        
         clearInterval(inferenceInterval);
         
-        statusIndicator.className = 'status-indicator';
-        statusIcon.innerText = '🛡️';
-        statusText.innerText = 'Hệ thống đã dừng';
-        
-        clearOverlay(); // Xóa khung khi tắt máy
-        addLog('Tắt hệ thống AI.', 'info');
+        // Reset view
+        systemStatusVal.className = 'card-value safe';
+        systemStatusVal.innerHTML = `<span class="icon">✅</span> <span class="text">Hệ thống Tạm dừng</span>`;
+        personCountVal.innerText = '0';
+        personCountBox.classList.remove('danger');
+        clearOverlay(); 
     }
 });
 
