@@ -1,76 +1,73 @@
-# 🎯 Human Detection (YOLOv8 Edge Vision)
+# 🎯 YOLO Guard (Enterprise Security Dashboard)
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)
 ![YOLOv8](https://img.shields.io/badge/Ultralytics-YOLOv8-yellow.svg)
-![License](https://img.shields.io/badge/License-MIT-purple.svg)
+![MongoDB](https://img.shields.io/badge/MongoDB-NoSQL-47A248.svg)
+![Chart.js](https://img.shields.io/badge/Chart.js-Analytics-FF6384.svg)
 
-Hệ thống nhận diện con người (Human Detection) thời gian thực, được thiết kế theo tiêu chuẩn công nghiệp với kiến trúc Client-Server. Hệ thống sử dụng mô hình **YOLOv8** siêu nhẹ để nhận diện và theo dõi đối tượng trên trình duyệt Web mà không cần cài đặt phần mềm nặng trên client.
+Hệ thống Camera Giám sát An ninh Nhận diện Con người (Human Detection) thời gian thực. Được thiết kế theo chuẩn **Enterprise Command Center**, hệ thống tích hợp Trí tuệ Nhân tạo YOLOv8 với Cơ sở dữ liệu MongoDB để theo dõi, ghi hình, và phân tích các vụ xâm nhập tự động.
 
 ## 🚀 Tính năng nổi bật (Features)
-- **Real-time Object Detection:** Suy luận với tốc độ cao bằng YOLOv8n.
-- **Bounding Box Overlay:** Vẽ khung nhận diện trực tiếp trên luồng Video bằng HTML5 Canvas.
-- **RESTful API Architecture:** Backend độc lập bằng FastAPI, dễ dàng scale bằng Docker.
-- **Zero-setup Client:** Client chỉ cần trình duyệt web hỗ trợ WebRTC (Camera).
 
-## 🧠 Kiến trúc Hệ thống (Architecture)
+- **🔥 Dark Theme Command Center:** Giao diện Dashboard chuẩn doanh nghiệp, chia Tab (SPA) mượt mà không cần tải lại trang.
+- **👁️ Nhận diện Real-time (YOLOv8):** Bắt trộm tốc độ cao trực tiếp trên luồng Camera bằng AI.
+- **🚨 Lưu vết Đột nhập (MongoDB):** Mọi sự cố báo động đều được ghi thẳng vào Cơ sở dữ liệu MongoDB ngầm, dữ liệu không bao giờ bị mất khi khởi động lại.
+- **📈 Phân tích Biểu đồ (Chart.js):** Tự động vẽ Biểu đồ Đường (Line Chart) mô phỏng mức độ nguy hiểm của các vụ đột nhập theo thời gian thực.
+- **⚙️ Cài đặt Độ Nhạy AI:** Tính năng "Sát thủ" cho phép Admin dùng thanh trượt (Slider) lọc nhiễu AI, chỉ báo động khi độ tin cậy vượt qua ngưỡng cho phép (Ví dụ: >80%).
+- **📸 Chụp ảnh Bằng chứng:** Bấm nút chụp ảnh đối tượng tình nghi cùng khung đỏ nhận diện tải thẳng về máy tính.
+
+## 🧠 Kiến trúc Hệ thống (3-Tier Architecture)
+
+Hệ thống hiện tại là một dây chuyền công nghiệp với 3 máy chủ chạy song song:
 
 ```mermaid
 sequenceDiagram
-    participant Cam as Webcam (Frontend)
-    participant UI as Browser Canvas
+    participant UI as Browser (Frontend + Chart.js)
     participant API as FastAPI Backend
-    participant YOLO as YOLOv8 Core
+    participant YOLO as YOLOv8 AI Core
+    participant DB as MongoDB Server
 
-    Cam->>UI: Stream Video
-    loop Every 800ms
-        UI->>API: POST /predict (JPEG Frame)
-        API->>YOLO: model.predict(image, conf=0.5)
-        YOLO-->>API: Array of Boxes [x, y, w, h]
-        API-->>UI: JSON {status, message, persons[]}
-        UI->>UI: Draw Red Bounding Boxes
+    UI->>API: 1. Stream Frame (JPEG)
+    API->>YOLO: 2. model.predict(image)
+    YOLO-->>API: 3. Box Coordinates & Confidence
+    
+    alt Nếu Phát hiện Người (ALARM)
+        API->>DB: 4a. Ghi Log Lịch sử & Tăng đếm Thống kê
     end
+    
+    API-->>UI: 4b. Trả về JSON (status, persons)
+    UI->>UI: 5. Vẽ Khung Đỏ & Gọi API cập nhật Biểu đồ
 ```
 
 ## 🛠️ Cài đặt & Triển khai (Deployment)
 
-Cách chuyên nghiệp nhất để chạy hệ thống này là sử dụng **Docker Compose**.
+Cách chuyên nghiệp và duy nhất để chạy hệ thống này là sử dụng **Docker Compose**, vì nó cần khởi động cả 3 máy chủ (UI, API, DB) cùng lúc và nối mạng với nhau.
 
-### 1. Triển khai bằng Docker (Khuyên dùng)
-Yêu cầu: Máy tính/Edge Device đã cài đặt Docker & Docker Compose.
+Yêu cầu: Máy tính/VPS đã cài đặt Docker & Docker Compose.
 ```bash
+# Lệnh duy nhất để khởi động toàn bộ dây chuyền
 docker-compose up -d --build
 ```
-- **Frontend (UI):** Truy cập `http://localhost:80`
-- **Backend (API):** Chạy ngầm tại `http://localhost:8080`
 
-### 2. Chạy thủ công (Dành cho Developer)
-Nếu không có Docker, bạn có thể chạy chay từng module:
-```bash
-# Terminal 1: Chạy Backend
-cd backend
-pip install -r requirements.txt
-python main.py
+**Các cổng Dịch vụ (Ports):**
+- **Trung tâm Điều khiển (Frontend):** Truy cập `http://localhost:80`
+- **Lõi Trí tuệ Nhân tạo (Backend API):** Chạy ngầm tại `http://localhost:8080`
+- **Cơ sở Dữ liệu (MongoDB):** Chạy ngầm tại `localhost:27017`
 
-# Terminal 2: Chạy Frontend
-Mở file frontend/index.html bằng trình duyệt.
-```
-
-## 📁 Cấu trúc Thư mục
+## 📁 Cấu trúc Thư mục Hệ thống
 ```text
 human-detection/
+├── docker-compose.yml       # Bản vẽ kiến trúc 3 Máy chủ
 ├── backend/
-│   ├── main.py              # Logic AI & API Endpoint
-│   ├── requirements.txt     # Thư viện Python
-│   └── MODULE.md            # Tài liệu nội bộ Backend
+│   ├── main.py              # Logic AI YOLOv8 & Kết nối MongoDB (Motor)
+│   ├── requirements.txt     # Các bộ não (FastAPI, Ultralytics, Motor)
+│   └── yolov8n.pt           # Tệp tạ mô hình AI (Tự động tải)
 ├── frontend/
-│   ├── app.js               # WebRTC & Canvas Logic
-│   ├── index.html           # UI Layout
-│   ├── style.css            # Dark mode UI
-│   └── MODULE.md            # Tài liệu nội bộ Frontend
-├── AGENT_CONTEXT.md         # Context chuẩn mực cho AI Agent
-└── README.md
+│   ├── app.js               # Logic WebRTC, SPA Tab, Chart.js & Fetch API
+│   ├── index.html           # Layout Command Center (HTML5)
+│   └── style.css            # Dark Theme CSS
 ```
 
 ## 🛡️ License
-Dự án được phân phối dưới giấy phép MIT. Xem thêm tại file `LICENSE`.
+Dự án YOLO Guard được phân phối dưới giấy phép MIT. Xem thêm tại file `LICENSE`.
