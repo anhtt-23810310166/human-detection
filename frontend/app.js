@@ -16,28 +16,21 @@ const personCountBox = document.getElementById('personCountBox');
 let isEngineRunning = false;
 let inferenceInterval = null;
 
-// Cập nhật đồng hồ giống format trong ảnh: 07-31-2020 Fri 09:07:12 PM
+// Clock
 setInterval(() => {
     const now = new Date();
-    
-    // Format Date: MM-DD-YYYY
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const date = String(now.getDate()).padStart(2, '0');
     const year = now.getFullYear();
-    
-    // Format Day
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const day = days[now.getDay()];
-    
-    // Format Time: hh:mm:ss A
     let hours = now.getHours();
     const ampm = hours >= 12 ? 'PM' : 'AM';
     hours = hours % 12;
-    hours = hours ? hours : 12; // the hour '0' should be '12'
+    hours = hours ? hours : 12;
     const strTime = String(hours).padStart(2, '0') + ':' + 
                     String(now.getMinutes()).padStart(2, '0') + ':' + 
                     String(now.getSeconds()).padStart(2, '0') + ' ' + ampm;
-    
     liveTimestamp.innerText = `${month}-${date}-${year} ${day} ${strTime}`;
 }, 1000);
 
@@ -45,7 +38,6 @@ async function startWebcam() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
         video.srcObject = stream;
-        
         video.onloadedmetadata = () => {
             overlayCanvas.width = video.videoWidth;
             overlayCanvas.height = video.videoHeight;
@@ -62,22 +54,18 @@ function clearOverlay() {
     overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 }
 
-// Vẽ khung đỏ (Bounding Box)
 function drawBoxes(persons) {
     clearOverlay();
-    
     persons.forEach(person => {
         const [x1, y1, x2, y2] = person.box;
         const width = x2 - x1;
         const height = y2 - y1;
         const conf = (person.confidence * 100).toFixed(0);
 
-        // Vẽ Khung màu Đỏ Cam
         overlayCtx.strokeStyle = '#ff3333'; 
         overlayCtx.lineWidth = 3;
         overlayCtx.strokeRect(x1, y1, width, height);
 
-        // Vẽ nhãn (Label)
         overlayCtx.fillStyle = '#ff3333';
         overlayCtx.fillRect(x1, y1 - 25, 110, 25);
         
@@ -89,24 +77,18 @@ function drawBoxes(persons) {
 
 async function analyzeFrame() {
     if (!isEngineRunning) return;
-
     captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-
     captureCanvas.toBlob(async (blob) => {
         const formData = new FormData();
         formData.append('file', blob, 'frame.jpg');
-
         try {
             const response = await fetch('http://localhost:8080/predict', {
                 method: 'POST',
                 body: formData
             });
-
             if (!response.ok) throw new Error("Mất kết nối Server");
-
             const result = await response.json();
             updateStatus(result);
-
         } catch (error) {
             console.error(error);
         }
@@ -115,60 +97,98 @@ async function analyzeFrame() {
 
 function updateStatus(result) {
     if (result.status === "ALARM") {
-        // Update Status Card
         systemStatusVal.className = 'card-value danger';
         systemStatusVal.innerHTML = `<span class="icon">🚨</span> <span class="text">PHÁT HIỆN ĐỘT NHẬP</span>`;
-        
-        // Update Count
         const count = result.persons ? result.persons.length : 0;
         personCountVal.innerText = count;
         personCountBox.classList.add('danger');
-        
-        if (result.persons) {
-            drawBoxes(result.persons);
-        }
+        if (result.persons) drawBoxes(result.persons);
     } 
     else {
-        // SAFE
         systemStatusVal.className = 'card-value safe';
         systemStatusVal.innerHTML = `<span class="icon">✅</span> <span class="text">An toàn</span>`;
-        
         personCountVal.innerText = '0';
         personCountBox.classList.remove('danger');
-        
         clearOverlay();
     }
 }
 
+// AI Toggle
 toggleBtn.addEventListener('click', () => {
     isEngineRunning = !isEngineRunning;
-    
     if (isEngineRunning) {
         toggleBtn.innerHTML = `<span class="icon">⏹️</span> Dừng AI`;
         toggleBtn.classList.add('active');
-        
         engineStatusBadge.innerText = 'AI: ĐANG HOẠT ĐỘNG';
         engineStatusBadge.style.color = '#00e676';
         engineStatusBadge.style.borderColor = '#00e676';
-        
         inferenceInterval = setInterval(analyzeFrame, 800);
     } else {
         toggleBtn.innerHTML = `<span class="icon">⚡</span> Khởi động AI`;
         toggleBtn.classList.remove('active');
-        
         engineStatusBadge.innerText = 'AI: ĐANG CHỜ LỆNH';
         engineStatusBadge.style.color = '#00e5ff';
         engineStatusBadge.style.borderColor = '#00e5ff';
-        
         clearInterval(inferenceInterval);
         
-        // Reset view
         systemStatusVal.className = 'card-value safe';
         systemStatusVal.innerHTML = `<span class="icon">✅</span> <span class="text">Hệ thống Tạm dừng</span>`;
         personCountVal.innerText = '0';
         personCountBox.classList.remove('danger');
         clearOverlay(); 
     }
+});
+
+// SPA Navigation Logic
+const navItems = document.querySelectorAll('.nav-item');
+const viewSections = document.querySelectorAll('.view-section');
+
+navItems.forEach(item => {
+    item.addEventListener('click', () => {
+        // Remove active class from all nav items
+        navItems.forEach(nav => nav.classList.remove('active'));
+        // Add active class to clicked item
+        item.classList.add('active');
+        
+        // Hide all views
+        viewSections.forEach(view => {
+            view.classList.remove('active');
+        });
+        
+        // Show target view
+        const targetId = item.getAttribute('data-target');
+        const targetView = document.getElementById(targetId);
+        if (targetView) {
+            targetView.classList.add('active');
+        }
+    });
+});
+
+// Snapshot Logic
+const snapshotBtn = document.getElementById('snapshotBtn');
+snapshotBtn.addEventListener('click', () => {
+    // 1. Draw video frame to capture canvas
+    captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+    // 2. Draw overlay (bounding boxes) on top of capture canvas
+    captureCtx.drawImage(overlayCanvas, 0, 0);
+    
+    // 3. Download the merged image
+    const dataURL = captureCanvas.toDataURL('image/jpeg', 1.0);
+    const a = document.createElement('a');
+    a.href = dataURL;
+    
+    // Add timestamp to filename
+    const now = new Date();
+    const timeStr = `${now.getHours()}${now.getMinutes()}${now.getSeconds()}`;
+    a.download = `YOLO_Snapshot_${timeStr}.jpg`;
+    
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    // Feedback effect
+    snapshotBtn.style.color = 'var(--cyan)';
+    setTimeout(() => { snapshotBtn.style.color = ''; }, 500);
 });
 
 startWebcam();
