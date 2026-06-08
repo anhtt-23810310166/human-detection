@@ -17,6 +17,7 @@ Hệ thống Camera Giám sát An ninh Nhận diện Con người (Human Detecti
 - **📈 Phân tích Biểu đồ (Chart.js):** Tự động vẽ Biểu đồ Đường (Line Chart) mô phỏng mức độ nguy hiểm của các vụ đột nhập theo thời gian thực.
 - **⚙️ Cài đặt Độ Nhạy AI:** Tính năng "Sát thủ" cho phép Admin dùng thanh trượt (Slider) lọc nhiễu AI, chỉ báo động khi độ tin cậy vượt qua ngưỡng cho phép (Ví dụ: >80%).
 - **📸 Chụp ảnh Bằng chứng:** Bấm nút chụp ảnh đối tượng tình nghi cùng khung đỏ nhận diện tải thẳng về máy tính.
+- **📲 Báo động Telegram Tức thời:** Tự động vẽ Khung đỏ, Watermark Thời gian/Camera lên ảnh bằng `OpenCV` và gửi thẳng tin nhắn báo động về điện thoại của Giám đốc bảo vệ qua `Telegram Bot API` (Kèm cơ chế chống Spam thông minh).
 
 ## 🧠 Kiến trúc Hệ thống (3-Tier Architecture)
 
@@ -28,6 +29,7 @@ sequenceDiagram
     participant API as FastAPI Backend
     participant YOLO as YOLOv8 AI Core
     participant DB as MongoDB Server
+    participant Tele as Telegram Bot API
 
     UI->>API: 1. Stream Frame (JPEG)
     API->>YOLO: 2. model.predict(image)
@@ -35,10 +37,12 @@ sequenceDiagram
     
     alt Nếu Phát hiện Người (ALARM)
         API->>DB: 4a. Ghi Log Lịch sử & Tăng đếm Thống kê
+        API->>API: 4b. Dùng OpenCV vẽ Box Đỏ & Watermark
+        API->>Tele: 4c. Gửi Ảnh Bằng chứng + Cảnh báo
     end
     
-    API-->>UI: 4b. Trả về JSON (status, persons)
-    UI->>UI: 5. Vẽ Khung Đỏ & Gọi API cập nhật Biểu đồ
+    API-->>UI: 5. Trả về JSON (status, persons)
+    UI->>UI: 6. Vẽ Khung Đỏ & Gọi API cập nhật Biểu đồ
 ```
 
 ## 🛠️ Cài đặt & Triển khai (Deployment)
