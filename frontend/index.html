@@ -133,24 +133,24 @@
                             </div>
 
                             <div class="video-footer-overlay">
-                                <button id="toggleEngineBtn" class="engine-btn">
+                                <button id="toggleEngineBtn" class="action-btn-small" style="margin-right: 12px; background-color: var(--card-bg);">
                                     <span class="icon">⚡</span> Khởi động AI
                                 </button>
-                                <div class="engine-status" id="engineStatusBadge">AI: ĐANG CHỜ LỆNH</div>
+                                <div class="engine-badge" id="engineStatusBadge">AI: ĐANG CHỜ LỆNH</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Khối thẻ thông số dưới Video -->
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="card-title">TRẠNG THÁI HỆ THỐNG</div>
+                    <div class="bottom-cards">
+                        <div class="status-card">
+                            <div class="card-title"><span class="dot-title"></span> TRẠNG THÁI HỆ THỐNG</div>
                             <div class="card-value safe" id="systemStatusVal">
                                 <span class="icon">✅</span> <span class="text">Hệ thống Tạm dừng</span>
                             </div>
                         </div>
-                        <div class="stat-card" id="personCountBox">
-                            <div class="card-title">SỐ LƯỢNG ĐỐI TƯỢNG</div>
+                        <div class="status-card" id="personCountBox">
+                            <div class="card-title"><span class="dot-title"></span> SỐ LƯỢNG ĐỐI TƯỢNG</div>
                             <div class="card-value count">
                                 <span class="number" id="personCountVal">0</span>
                                 <span class="unit">NGƯỜI</span>
@@ -191,15 +191,15 @@
                             <h2>👥 Tổng quan Quân số</h2>
                             <button id="clearStatsBtn" class="action-btn-small">Reset Thống kê</button>
                         </div>
-                        <div class="stats-grid">
-                            <div class="stat-card">
-                                <div class="card-title">TỔNG SỐ LƯỢT QUÉT (FRAMES)</div>
+                        <div class="bottom-cards" style="margin-top: 20px;">
+                            <div class="status-card">
+                                <div class="card-title"><span class="dot-title"></span> TỔNG SỐ LƯỢT QUÉT (FRAMES)</div>
                                 <div class="card-value count">
                                     <span class="number" id="totalScansVal">0</span>
                                 </div>
                             </div>
-                            <div class="stat-card">
-                                <div class="card-title">TỔNG SỐ LẦN PHÁT HIỆN</div>
+                            <div class="status-card">
+                                <div class="card-title"><span class="dot-title"></span> TỔNG SỐ LẦN PHÁT HIỆN</div>
                                 <div class="card-value count" style="color: var(--orange);">
                                     <span class="number" id="totalAlarmsVal">0</span>
                                 </div>
