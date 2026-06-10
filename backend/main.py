@@ -126,7 +126,6 @@ async def login(username: str = Form(...), password: str = Form(...)):
 # --- CÁC API BỊ BẢO VỆ (PROTECTED ENDPOINTS) ---
 @app.post("/predict")
 async def predict(file: UploadFile = File(...), current_user: str = Depends(get_current_user)):
-    global model, db
     if model is None:
         raise HTTPException(status_code=503, detail="Model is not loaded.")
     
