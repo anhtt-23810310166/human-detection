@@ -45,6 +45,16 @@ sequenceDiagram
     UI->>UI: 6. Vẽ Khung Đỏ & Gọi API cập nhật Biểu đồ
 ```
 
+## 🔄 CI/CD & Testing (DevOps)
+
+Dự án được trang bị luồng **CI/CD tự động** (Continuous Integration / Continuous Deployment) đạt chuẩn thực tế thông qua **GitHub Actions**:
+
+- **Linting & Code Quality:** Sử dụng `Flake8` để tự động quét lỗi cú pháp (Syntax error, Unused variables) trước khi cho phép đóng gói.
+- **Unit Testing:** Tích hợp `Pytest` để tự động chạy các kịch bản kiểm tra bảo mật (Băm mật khẩu Bcrypt, JWT Token) trong `test_main.py`. Mọi thay đổi code đều phải vượt qua bài Test mới được duyệt.
+- **Docker Build & Push:** Tự động Build ảnh (Image) cho Frontend và Backend, hỗ trợ **Docker Buildx Caching** siêu tốc độ, sau đó an toàn đẩy lên Docker Hub.
+- **Smart Tagging:** Quản lý phiên bản chặt chẽ bằng cách tự động đánh Tag `:latest` cho bản mới nhất và mã SHA `:sha-xxx` để dự phòng Rollback.
+- **Continuous Deployment:** Sẵn sàng kịch bản kết nối SSH để tự động kéo Image và cập nhật hệ thống trên máy chủ VPS mỗi khi code được đưa lên nhánh chính.
+
 ## 🛠️ Cài đặt & Triển khai (Deployment)
 
 Cách chuyên nghiệp và duy nhất để chạy hệ thống này là sử dụng **Docker Compose**, vì nó cần khởi động cả 3 máy chủ (UI, API, DB) cùng lúc và nối mạng với nhau.
