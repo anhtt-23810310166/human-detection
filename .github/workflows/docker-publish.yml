@@ -3,36 +3,134 @@ name: CI/CD Docker Pipeline
 on:
   push:
     branches: [ "master", "main" ]
+    tags: [ 'v*.*.*' ]
   pull_request:
     branches: [ "master", "main" ]
 
 jobs:
-  build-and-push:
+  # ==========================================
+  # JOB 1: LINTING & TESTING (KIỂM TRA CODE)
+  # ==========================================
+  lint-and-test-backend:
+    name: 🧪 Kiểm tra Backend (Lint & Test)
     runs-on: ubuntu-latest
     steps:
-      # 1. Lấy Source Code từ GitHub về
-      - name: 📥 Tải Source Code (Checkout)
+      - name: 📥 Tải Source Code
         uses: actions/checkout@v4
 
-      # 2. Đăng nhập vào Docker Hub bằng Tài khoản Bí mật
+      - name: 🐍 Thiết lập Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: 📦 Cài đặt thư viện kiểm tra (Flake8, Pytest)
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest
+          if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; fi
+
+      - name: 🔍 Kiểm tra lỗi cú pháp (Linting bằng Flake8)
+        run: |
+          flake8 backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 backend/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: 🧪 Chạy Unit Test tự động (Pytest)
+        run: |
+          if [ -d "backend/tests" ] || ls backend/test_*.py 1> /dev/null 2>&1; then
+            pytest backend/
+          else
+            echo "⚠️ Chưa tìm thấy file Unit Test (test_*.py). Sẽ bỏ qua bước này."
+          fi
+
+  # ==========================================
+  # JOB 2: BUILD & PUSH (ĐÓNG GÓI IMAGE)
+  # ==========================================
+  build-and-push:
+    name: 🚀 Đóng gói & Bắn lên Docker Hub
+    needs: [lint-and-test-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Tải Source Code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: 🔑 Đăng nhập Docker Hub
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
           
-      # 3. Đóng gói & Bắn chiếc hộp Backend lên Mây
+      - name: 🏷️ Tạo Tags cho Backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/human-detection-backend
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+
       - name: 🚀 Build & Push Backend
         uses: docker/build-push-action@v5
         with:
           context: ./backend
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/human-detection-backend:latest
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           
-      # 4. Đóng gói & Bắn chiếc hộp Frontend lên Mây
+      - name: 🏷️ Tạo Tags cho Frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/human-detection-frontend
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+
       - name: 🚀 Build & Push Frontend
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/human-detection-frontend:latest
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ==========================================
+  # JOB 3: DEPLOYMENT (TỰ ĐỘNG CẬP NHẬT LÊN SERVER - BƯỚC CUỐI)
+  # ==========================================
+  deploy-to-vps:
+    name: 🌐 Tự động Deploy lên Server (CD)
+    needs: [build-and-push] # Chỉ chạy khi Build thành công
+    runs-on: ubuntu-latest
+    
+    # Tạm thời TẮT bước này (if: false) vì bạn chưa có VPS. 
+    # Khi nào có VPS, hãy đổi lại thành: if: github.event_name != 'pull_request'
+    if: false 
+    steps:
+      - name: 🚀 SSH & Cập nhật Server
+        uses: appleboy/ssh-action@v1.0.3
+        # Dùng SSH để truy cập server và tự động pull code + chạy lại Docker
+        with:
+          host: ${{ secrets.VPS_HOST }}       # IP của VPS
+          username: ${{ secrets.VPS_USER }}   # Tên đăng nhập (root, ubuntu...)
+          password: ${{ secrets.VPS_PASSWORD }} # (Hoặc dùng key: ${{ secrets.VPS_SSH_KEY }})
+          port: 22
+          script: |
+            # Di chuyển tới thư mục chứa code trên VPS
+            cd /path/to/human-detection 
+            
+            # Kéo (pull) image mới nhất từ Docker Hub về
+            docker-compose pull
+            
+            # Khởi động lại các container với image mới
+            docker-compose up -d
+            
+            # Xóa các image cũ để dọn rác, giải phóng bộ nhớ
+            docker image prune -f
